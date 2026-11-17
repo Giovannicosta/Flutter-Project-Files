@@ -38,6 +38,59 @@ class TableRepository {
 
   CollectionReference<Map<String, dynamic>> get _tables => _db.collection('tables');
 
+  String get _memberName {
+    final user = _auth.currentUser;
+    final displayName = user?.displayName?.trim() ?? '';
+    if (displayName.isNotEmpty) return displayName.substring(0, displayName.length.clamp(0, 60));
+    final email = user?.email ?? '';
+    if (email.isNotEmpty) {
+      final local = email.split('@').first;
+      return local.substring(0, local.length.clamp(0, 60));
+    }
+    return 'Member';
+  }
+
+  Future<void> _ownerAction(String tableId, String targetUid, String action) async {
+    final uid = _uid;
+    if (uid == targetUid) throw StateError('You cannot moderate your own account.');
+    final table = _tables.doc(tableId);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(table);
+      if (!snapshot.exists) throw StateError('Table not found.');
+      final data = snapshot.data()!;
+      if (data['ownerId'] != uid) throw StateError('Only the owner can manage members.');
+      final members = List<String>.from(data['memberIds'] as List? ?? []);
+      final moderators = List<String>.from(data['moderatorIds'] as List? ?? []);
+      final banned = List<String>.from(data['bannedIds'] as List? ?? []);
+      if (action == 'kick' || action == 'ban') {
+        members.remove(targetUid);
+        moderators.remove(targetUid);
+        if (action == 'ban' && !banned.contains(targetUid)) banned.add(targetUid);
+      } else if (action == 'promote') {
+        if (!members.contains(targetUid)) throw StateError('User is not a member.');
+        if (!moderators.contains(targetUid)) moderators.add(targetUid);
+      } else if (action == 'demote') {
+        moderators.remove(targetUid);
+      } else if (action == 'unban') {
+        banned.remove(targetUid);
+      }
+      transaction.update(table, {
+        'memberIds': members,
+        'moderatorIds': moderators,
+        'bannedIds': banned,
+      });
+    });
+  }
+
+  Future<void> kickMember(String tableId, String memberUid) =>
+      _ownerAction(tableId, memberUid, 'kick');
+  Future<void> banMember(String tableId, String memberUid) =>
+      _ownerAction(tableId, memberUid, 'ban');
+  Future<void> setModerator(String tableId, String memberUid, bool enabled) =>
+      _ownerAction(tableId, memberUid, enabled ? 'promote' : 'demote');
+  Future<void> unbanMember(String tableId, String memberUid) =>
+      _ownerAction(tableId, memberUid, 'unban');
+
   CollectionReference<Map<String, dynamic>> _notes(String tableId) =>
       _tables.doc(tableId).collection('notes');
 
@@ -75,6 +128,9 @@ class TableRepository {
       'name': normalized,
       'ownerId': uid,
       'memberIds': [uid],
+      'memberNames': {uid: _memberName},
+      'moderatorIds': <String>[],
+      'bannedIds': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
     return table.id;
@@ -95,10 +151,14 @@ class TableRepository {
       final members = List<String>.from(
         snapshot.data()?['memberIds'] as List<dynamic>? ?? const [],
       );
+      final banned = List<String>.from(snapshot.data()?['bannedIds'] as List<dynamic>? ?? const []);
+      if (banned.contains(uid)) throw StateError('You are banned from this table.');
       if (members.contains(uid)) return;
-      // Server rules permit only adding your own UID, without other edits.
+      final names = Map<String, dynamic>.from(snapshot.data()?['memberNames'] as Map? ?? {});
+      names[uid] = _memberName;
       transaction.update(table, {
         'memberIds': FieldValue.arrayUnion([uid]),
+        'memberNames': names,
       });
     });
     return id;
