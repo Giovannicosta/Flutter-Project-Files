@@ -70,6 +70,18 @@ service cloud.firestore {
         && request.resource.data.memberNames[request.auth.uid].size() <= 60
         && listIsValid();
 
+      // Members may update only their own public name in this table.
+      // This also populates legacy tables that have no memberNames map.
+      allow update: if member()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['memberNames'])
+        && request.resource.data.memberNames is map
+        && request.resource.data.memberNames.diff(resource.data.get('memberNames', {}))
+            .affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.memberNames[request.auth.uid] is string
+        && request.resource.data.memberNames[request.auth.uid].size() > 0
+        && request.resource.data.memberNames[request.auth.uid].size() <= 60;
+
       // Owner may only change membership, moderator assignments and bans.
       allow update: if owner()
         && request.resource.data.diff(resource.data).affectedKeys()
