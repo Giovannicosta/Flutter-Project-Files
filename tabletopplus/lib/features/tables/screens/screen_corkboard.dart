@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,6 +11,7 @@ import '../data/table_repository.dart';
 import '../models/board_note.dart';
 import '../models/table_model.dart';
 import '../widgets/widget_sticky_note.dart';
+import '../widgets/table_members_drawer.dart';
 
 class ScreenCorkboard extends ConsumerStatefulWidget {
   const ScreenCorkboard({super.key, required this.tableId});
@@ -131,18 +131,6 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
     }
   }
 
-  Future<void> _copyCode() async {
-    try {
-      await Clipboard.setData(ClipboardData(text: widget.tableId));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invite code copied. Share it with your group!')),
-      );
-    } catch (error) {
-      _showError(error);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // The authenticated root screen owns email verification / onboarding.
@@ -176,14 +164,15 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
             onBack: () => context.go('/'),
           );
         }
-        return _buildBoard(context, table);
+        return _buildBoard(context, table, user.uid);
       },
     );
   }
 
-  Widget _buildBoard(BuildContext context, TableModel table) {
+  Widget _buildBoard(BuildContext context, TableModel table, String uid) {
     final notesAsync = ref.watch(boardNotesProvider(widget.tableId));
     return Scaffold(
+      drawer: TableMembersDrawer(table: table, currentUid: uid),
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.go('/')),
         title: Column(
@@ -201,10 +190,12 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
             onPressed: () => _transform.value = Matrix4.identity(),
             icon: const Icon(Icons.center_focus_strong),
           ),
-          IconButton(
-            tooltip: 'Copy table invite code',
-            onPressed: _copyCode,
-            icon: const Icon(Icons.person_add_alt_1_outlined),
+          Builder(
+            builder: (scaffoldContext) => IconButton(
+              tooltip: 'Table members',
+              onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
+              icon: const Icon(Icons.person_outline),
+            ),
           ),
         ],
       ),
