@@ -119,7 +119,7 @@ class TableMembersDrawer extends ConsumerWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              table.memberNames[uid] ?? 'Member ${uid.substring(0, uid.length > 6 ? 6 : uid.length)}',
+                              table.memberNames[uid] ?? 'Member (name pending)',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -160,7 +160,7 @@ class TableMembersDrawer extends ConsumerWidget {
                       ListTile(
                         leading: const Icon(Icons.block_outlined),
                         title: Text(table.memberNames[uid] ??
-                            'Member ${uid.substring(0, uid.length > 6 ? 6 : uid.length)}'),
+                            'Member (name pending)'),
                         trailing: TextButton(
                           onPressed: () => _moderate(context, ref, uid, 'unban'),
                           child: const Text('Unban'),

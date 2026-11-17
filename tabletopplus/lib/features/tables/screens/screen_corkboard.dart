@@ -32,6 +32,7 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
   final Map<String, Offset> _localPositions = {};
   Size _viewportSize = const Size(400, 600);
   int _noteCount = 0;
+  String? _lastScheduledMemberName;
 
   @override
   void dispose() {
@@ -163,6 +164,29 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
             detail: 'You are not a member of this table, or it no longer exists.',
             onBack: () => context.go('/'),
           );
+        }
+        final profile = userProfile.profile;
+        final fullName = [profile.firstName.trim(), profile.lastName.trim()]
+            .where((part) => part.isNotEmpty)
+            .join(' ');
+        final displayedName = fullName.length > 60
+            ? fullName.substring(0, 60)
+            : fullName;
+        if (displayedName.isNotEmpty &&
+            table.memberNames[user.uid] != displayedName &&
+            _lastScheduledMemberName != displayedName) {
+          _lastScheduledMemberName = displayedName;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            try {
+              await ref.read(tableRepositoryProvider)
+                  .syncMemberName(widget.tableId, displayedName);
+            } catch (error) {
+              // Displaying the corkboard must not fail if name sync fails.
+              debugPrint('Unable to synchronize table member name: $error');
+              if (mounted) _lastScheduledMemberName = null;
+            }
+          });
         }
         return _buildBoard(context, table, user.uid);
       },

@@ -38,16 +38,36 @@ class TableRepository {
 
   CollectionReference<Map<String, dynamic>> get _tables => _db.collection('tables');
 
-  String get _memberName {
+  static String _shortName(String name) =>
+      name.length > 60 ? name.substring(0, 60) : name;
+
+  // User-facing names live in user_profiles, not FirebaseAuth.displayName.
+  // Only fetch the signed-in user's private profile; don't expose other
+  // members' emails or full profile documents.
+  Future<String> _loadMemberName() async {
+    try {
+      final document = await _db.collection('user_profiles').doc(_uid).get();
+      final first = (document.data()?['first_name'] as String? ?? '').trim();
+      final last = (document.data()?['last_name'] as String? ?? '').trim();
+      final profileName = [first, last].where((part) => part.isNotEmpty).join(' ');
+      if (profileName.isNotEmpty) return _shortName(profileName);
+    } on FirebaseException {
+      // Profile may be unavailable offline; use a safe fallback.
+    }
     final user = _auth.currentUser;
     final displayName = user?.displayName?.trim() ?? '';
-    if (displayName.isNotEmpty) return (displayName.length > 60 ? displayName.substring(0, 60) : displayName);
-    final email = user?.email ?? '';
-    if (email.isNotEmpty) {
-      final local = email.split('@').first;
-      return (local.length > 60 ? local.substring(0, 60) : local);
-    }
+    if (displayName.isNotEmpty) return _shortName(displayName);
     return 'Member';
+  }
+
+  // Existing tables may not have memberNames. Refresh only your own entry,
+  // so everyone sees your current profile name through the table stream.
+  Future<void> syncMemberName(String tableId, String profileName) async {
+    final name = _shortName(profileName.trim());
+    if (name.isEmpty) return;
+    await _tables.doc(tableId).update({
+      FieldPath(['memberNames', _uid]): name,
+    });
   }
 
   Future<void> _ownerAction(String tableId, String targetUid, String action) async {
@@ -122,13 +142,14 @@ class TableRepository {
       throw ArgumentError('Table name must be between 1 and 60 characters.');
     }
     final uid = _uid;
+    final memberName = await _loadMemberName();
     // Firestore's auto-generated ID is high-entropy and acts as an invite code.
     final table = _tables.doc();
     await table.set({
       'name': normalized,
       'ownerId': uid,
       'memberIds': [uid],
-      'memberNames': {uid: _memberName},
+      'memberNames': {uid: memberName},
       'moderatorIds': <String>[],
       'bannedIds': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
@@ -142,6 +163,7 @@ class TableRepository {
       throw ArgumentError('Enter the 20-character invite code.');
     }
     final uid = _uid;
+    final memberName = await _loadMemberName();
     final table = _tables.doc(id);
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(table);
@@ -155,7 +177,7 @@ class TableRepository {
       if (banned.contains(uid)) throw StateError('You are banned from this table.');
       if (members.contains(uid)) return;
       final names = Map<String, dynamic>.from(snapshot.data()?['memberNames'] as Map? ?? {});
-      names[uid] = _memberName;
+      names[uid] = memberName;
       transaction.update(table, {
         'memberIds': FieldValue.arrayUnion([uid]),
         'memberNames': names,
