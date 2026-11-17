@@ -364,81 +364,113 @@ class _NoteDraft {
   final int colorValue;
 }
 
-Future<_NoteDraft?> _showNoteEditor(BuildContext context, {BoardNote? initial}) async {
-  final titleController = TextEditingController(text: initial?.title ?? '');
-  final bodyController = TextEditingController(text: initial?.body ?? '');
-  var colorValue = initial?.colorValue ?? noteColorValues.first;
-  String? errorMessage;
-  final result = await showDialog<_NoteDraft>(
+Future<_NoteDraft?> _showNoteEditor(BuildContext context, {BoardNote? initial}) {
+  return showDialog<_NoteDraft>(
     context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (dialogContext, setDialogState) => AlertDialog(
-        title: Text(initial == null ? 'New sticky note' : 'Edit sticky note'),
+    builder: (_) => _NoteEditorDialog(initial: initial),
+  );
+}
+
+// Controllers live for the lifetime of the dialog widget, including its
+// closing animation, rather than being disposed as soon as showDialog returns.
+class _NoteEditorDialog extends StatefulWidget {
+  const _NoteEditorDialog({this.initial});
+
+  final BoardNote? initial;
+
+  @override
+  State<_NoteEditorDialog> createState() => _NoteEditorDialogState();
+}
+
+class _NoteEditorDialogState extends State<_NoteEditorDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _bodyController;
+  late int _colorValue;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initial?.title ?? '');
+    _bodyController = TextEditingController(text: widget.initial?.body ?? '');
+    _colorValue = widget.initial?.colorValue ?? noteColorValues.first;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      setState(() => _errorMessage = 'Enter a title.');
+      return;
+    }
+    Navigator.of(context).pop(_NoteDraft(
+      title,
+      _bodyController.text.trim(),
+      _colorValue,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        scrollable: true,
+        title: Text(widget.initial == null ? 'New sticky note' : 'Edit sticky note'),
         content: SizedBox(
           width: 410,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: titleController,
-                  maxLength: 80,
-                  decoration: InputDecoration(labelText: 'Title', errorText: errorMessage),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: bodyController,
-                  minLines: 3,
-                  maxLines: 7,
-                  maxLength: 2000,
-                  decoration: const InputDecoration(labelText: 'Note text'),
-                ),
-                const SizedBox(height: 12),
-                const Text('Sticky note color'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 10,
-                  children: [
-                    for (final value in noteColorValues)
-                      Tooltip(
-                        message: 'Color ${noteColorValues.indexOf(value) + 1}',
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(50),
-                          onTap: () => setDialogState(() => colorValue = value),
-                          child: CircleAvatar(
-                            radius: 19,
-                            backgroundColor: Color(value),
-                            child: colorValue == value
-                                ? const Icon(Icons.check, size: 20, color: Colors.black87)
-                                : null,
-                          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _titleController,
+                maxLength: 80,
+                decoration: InputDecoration(labelText: 'Title', errorText: _errorMessage),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _bodyController,
+                minLines: 3,
+                maxLines: 7,
+                maxLength: 2000,
+                decoration: const InputDecoration(labelText: 'Note text'),
+              ),
+              const SizedBox(height: 12),
+              const Text('Sticky note color'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                children: [
+                  for (final value in noteColorValues)
+                    Tooltip(
+                      message: 'Color ${noteColorValues.indexOf(value) + 1}',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(50),
+                        onTap: () => setState(() => _colorValue = value),
+                        child: CircleAvatar(
+                          radius: 19,
+                          backgroundColor: Color(value),
+                          child: _colorValue == value
+                              ? const Icon(Icons.check, size: 20, color: Colors.black87)
+                              : null,
                         ),
                       ),
-                  ],
-                ),
-              ],
-            ),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () {
-              final title = titleController.text.trim();
-              if (title.isEmpty) {
-                setDialogState(() => errorMessage = 'Enter a title.');
-                return;
-              }
-              Navigator.pop(dialogContext, _NoteDraft(title, bodyController.text.trim(), colorValue));
-            },
-            child: Text(initial == null ? 'Add note' : 'Save changes'),
+            onPressed: _save,
+            child: Text(widget.initial == null ? 'Add note' : 'Save changes'),
           ),
         ],
-      ),
-    ),
-  );
-  titleController.dispose();
-  bodyController.dispose();
-  return result;
+      );
 }

@@ -146,78 +146,113 @@ class _ErrorState extends StatelessWidget {
 }
 
 Future<void> _showTableDialog(BuildContext context, WidgetRef ref, {required bool joining}) async {
-  final input = TextEditingController();
-  bool submitting = false;
-  String? errorMessage;
-  await showDialog<void>(
+  // The dialog owns its TextEditingController and disposes it only when the
+  // dialog's widget has actually been removed from the tree.
+  final repository = ref.read(tableRepositoryProvider);
+  final tableId = await showDialog<String>(
     context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (dialogContext, setDialogState) => AlertDialog(
-        title: Text(joining ? 'Join a table' : 'Create a table'),
+    builder: (_) => _TableEditorDialog(
+      repository: repository,
+      joining: joining,
+    ),
+  );
+
+  // Navigation belongs to the original page, never to the dialog's context.
+  if (tableId != null && context.mounted) {
+    context.push(ScreenCorkboard.pathFor(tableId));
+  }
+}
+
+class _TableEditorDialog extends StatefulWidget {
+  const _TableEditorDialog({
+    required this.repository,
+    required this.joining,
+  });
+
+  final TableRepository repository;
+  final bool joining;
+
+  @override
+  State<_TableEditorDialog> createState() => _TableEditorDialogState();
+}
+
+class _TableEditorDialogState extends State<_TableEditorDialog> {
+  final TextEditingController _input = TextEditingController();
+  bool _submitting = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final id = widget.joining
+          ? await widget.repository.joinTable(_input.text)
+          : await widget.repository.createTable(_input.text);
+      if (!mounted) return;
+      Navigator.of(context).pop(id);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _errorMessage = error is ArgumentError
+            ? error.message.toString()
+            : error is StateError
+                ? error.message
+                : 'Unable to save table. Check your connection and access rules.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        scrollable: true,
+        title: Text(widget.joining ? 'Join a table' : 'Create a table'),
         content: SizedBox(
           width: 360,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(joining
+              Text(widget.joining
                   ? 'Enter the 20-character code shared by the table creator.'
                   : 'Give your campaign a name. You can invite friends afterward.'),
               const SizedBox(height: 16),
               TextField(
-                controller: input,
+                controller: _input,
                 autofocus: true,
-                enabled: !submitting,
-                maxLength: joining ? 20 : 60,
+                enabled: !_submitting,
+                maxLength: widget.joining ? 20 : 60,
                 decoration: InputDecoration(
-                  labelText: joining ? 'Invite code' : 'Table name',
-                  hintText: joining ? 'Paste invite code' : 'The Lost Mines',
-                  errorText: errorMessage,
+                  labelText: widget.joining ? 'Invite code' : 'Table name',
+                  hintText: widget.joining ? 'Paste invite code' : 'The Lost Mines',
+                  errorText: _errorMessage,
                 ),
+                onSubmitted: (_) => _submit(),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: submitting ? null : () => Navigator.of(dialogContext).pop(),
+            onPressed: _submitting ? null : () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: submitting
-                ? null
-                : () async {
-                    setDialogState(() {
-                      submitting = true;
-                      errorMessage = null;
-                    });
-                    try {
-                      final repository = ref.read(tableRepositoryProvider);
-                      final id = joining
-                          ? await repository.joinTable(input.text)
-                          : await repository.createTable(input.text);
-                      if (!dialogContext.mounted) return;
-                      Navigator.of(dialogContext).pop();
-                      if (context.mounted) context.push(ScreenCorkboard.pathFor(id));
-                    } catch (error) {
-                      if (!dialogContext.mounted) return;
-                      setDialogState(() {
-                        submitting = false;
-                        errorMessage = error is ArgumentError
-                            ? error.message.toString()
-                            : error is StateError
-                                ? error.message
-                                : 'Unable to save table. Check your connection and access rules.';
-                      });
-                    }
-                  },
-            child: submitting
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(joining ? 'Join' : 'Create'),
+                : Text(widget.joining ? 'Join' : 'Create'),
           ),
         ],
-      ),
-    ),
-  );
-  input.dispose();
+      );
 }
