@@ -41,11 +41,11 @@ class TableRepository {
   String get _memberName {
     final user = _auth.currentUser;
     final displayName = user?.displayName?.trim() ?? '';
-    if (displayName.isNotEmpty) return displayName.substring(0, displayName.length.clamp(0, 60));
+    if (displayName.isNotEmpty) return (displayName.length > 60 ? displayName.substring(0, 60) : displayName);
     final email = user?.email ?? '';
     if (email.isNotEmpty) {
       final local = email.split('@').first;
-      return local.substring(0, local.length.clamp(0, 60));
+      return (local.length > 60 ? local.substring(0, 60) : local);
     }
     return 'Member';
   }
