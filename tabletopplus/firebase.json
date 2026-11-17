@@ -1,0 +1,29 @@
+
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tabletopplus",
+          "appId": "1:171939701136:android:bd985fe32ecb4c22b65315",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tabletopplus",
+          "configurations": {
+            "android": "1:171939701136:android:bd985fe32ecb4c22b65315",
+            "ios": "1:171939701136:ios:1d996a3e09051e9eb65315",
+            "macos": "1:171939701136:ios:1d996a3e09051e9eb65315",
+            "web": "1:171939701136:web:631eae5054cec46db65315",
+            "windows": "1:171939701136:web:9e39053f6fc5c89cb65315"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

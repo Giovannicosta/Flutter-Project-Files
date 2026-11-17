@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "171939701136",
+    "project_id": "tabletopplus",
+    "storage_bucket": "tabletopplus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:171939701136:android:bd985fe32ecb4c22b65315",
+        "android_client_info": {
+          "package_name": "com.example.tabletopplus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "171939701136-dm3p2ugmf5i6r8s721tg0m92tv06tr78.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tabletopplus",
+            "certificate_hash": "31e20cd49d2a50058ae6fdf4be896bff53662eae"
+          }
+        },
+        {
+          "client_id": "171939701136-bg149lp9pno33v6fkf9113mrj225s2bo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaHrdAWYuvYi2wo_66XpbtSE5R-95hKnU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "171939701136-bg149lp9pno33v6fkf9113mrj225s2bo.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "171939701136-lmcop8uopl893s87ito32agdhl75n2cg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.tabletopplus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
