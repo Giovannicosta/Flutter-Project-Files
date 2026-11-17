@@ -119,14 +119,14 @@ class TableMembersDrawer extends ConsumerWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              table.memberNames[uid] ?? 'Member ${uid.substring(0, uid.length.clamp(0, 6))}',
+                              table.memberNames[uid] ?? 'Member ${uid.substring(0, uid.length > 6 ? 6 : uid.length)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (uid == table.ownerId) ...[
                             const SizedBox(width: 6),
-                            const Icon(Icons.workspace_premium, color: Colors.amber, size: 21),
+                            const Text('👑', style: TextStyle(fontSize: 19)),
                           ],
                         ],
                       ),
@@ -160,7 +160,7 @@ class TableMembersDrawer extends ConsumerWidget {
                       ListTile(
                         leading: const Icon(Icons.block_outlined),
                         title: Text(table.memberNames[uid] ??
-                            'Member ${uid.substring(0, uid.length.clamp(0, 6))}'),
+                            'Member ${uid.substring(0, uid.length > 6 ? 6 : uid.length)}'),
                         trailing: TextButton(
                           onPressed: () => _moderate(context, ref, uid, 'unban'),
                           child: const Text('Unban'),
