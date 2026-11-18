@@ -11,6 +11,7 @@ import '../data/table_repository.dart';
 import '../models/board_note.dart';
 import '../models/table_model.dart';
 import '../widgets/widget_sticky_note.dart';
+import '../widgets/widget_corkboard_add_menu.dart';
 import '../widgets/table_members_drawer.dart';
 
 class ScreenCorkboard extends ConsumerStatefulWidget {
@@ -289,7 +290,7 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
                   if (notes.isEmpty)
                     const Positioned(
                       left: 20,
-                      top: 20,
+                      top: 90,
                       right: 20,
                       child: IgnorePointer(
                         child: Text('Your corkboard is empty. Tap + to add the first note.'),
@@ -310,16 +311,30 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
                       ),
                     ),
                   ),
+                  // The creation toolbar belongs to the board viewport, not
+                  // the Scaffold's app bar or its bottom-right FAB slot.
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    right: 12,
+                    child: WidgetCorkboardAddMenu(
+                      key: const ValueKey('corkboardAddMenu'),
+                      options: [
+                        // Future options (images, drawings, etc.) can be
+                        // registered here without changing the menu widget.
+                        CorkboardAddOption(
+                          label: 'Sticky note',
+                          icon: Icons.sticky_note_2_outlined,
+                          onSelected: _createNote,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNote,
-        icon: const Icon(Icons.add),
-        label: const Text('New note'),
       ),
     );
   }
