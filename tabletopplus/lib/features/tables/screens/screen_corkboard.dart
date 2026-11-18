@@ -32,7 +32,9 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
   final Map<String, Offset> _localPositions = {};
   Size _viewportSize = const Size(400, 600);
   int _noteCount = 0;
-  String? _lastScheduledMemberName;
+  // Avoid retrying a rejected name update on every rebuild. The attempt
+  // can run again after the screen is reopened or the profile name changes.
+  String? _lastMemberNameSyncAttemptKey;
 
   @override
   void dispose() {
@@ -172,10 +174,13 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
         final displayedName = fullName.length > 60
             ? fullName.substring(0, 60)
             : fullName;
+        final syncKey = '${widget.tableId}:${user.uid}:$displayedName';
         if (displayedName.isNotEmpty &&
             table.memberNames[user.uid] != displayedName &&
-            _lastScheduledMemberName != displayedName) {
-          _lastScheduledMemberName = displayedName;
+            _lastMemberNameSyncAttemptKey != syncKey) {
+          // Mark the attempt before scheduling; never clear it in catch.
+          // Permission-denied is not transient and must not cause a hot loop.
+          _lastMemberNameSyncAttemptKey = syncKey;
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (!mounted) return;
             try {
@@ -183,8 +188,7 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
                   .syncMemberName(widget.tableId, displayedName);
             } catch (error) {
               // Displaying the corkboard must not fail if name sync fails.
-              debugPrint('Unable to synchronize table member name: $error');
-              if (mounted) _lastScheduledMemberName = null;
+              debugPrint('Unable to synchronize table member name (will not retry until reopening this screen): $error');
             }
           });
         }
