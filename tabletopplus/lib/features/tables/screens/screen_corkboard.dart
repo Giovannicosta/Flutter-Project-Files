@@ -280,6 +280,10 @@ class _ScreenCorkboardState extends ConsumerState<ScreenCorkboard> {
                               top: (_localPositions[note.id]?.dy ?? note.y),
                               child: WidgetStickyNote(
                                 note: note,
+                                canEdit: note.createdBy == uid ||
+                                    table.isOwner(uid) || table.isModerator(uid),
+                                canDelete: note.createdBy == uid ||
+                                    table.isOwner(uid) || table.isModerator(uid),
                                 onDragUpdate: (details) => _updateNotePosition(note, details),
                                 onDragEnd: () => _finishMovingNote(note),
                                 onEdit: () => _editNote(note),
