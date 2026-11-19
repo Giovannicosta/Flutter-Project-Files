@@ -88,6 +88,18 @@ service cloud.firestore {
             .hasOnly(['memberIds', 'moderatorIds', 'bannedIds'])
         && listIsValid();
 
+      // A moderator may kick one regular member, without banning anyone,
+      // changing privileges, or removing the owner / another moderator.
+      allow update: if member()
+        && request.auth.uid in resource.data.get('moderatorIds', [])
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['memberIds'])
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && request.resource.data.memberIds.hasAll(resource.data.get('moderatorIds', []))
+        && resource.data.ownerId in request.resource.data.memberIds
+        && listIsValid();
+
       allow delete: if false;
 
       match /notes/{noteId} {
@@ -107,7 +119,8 @@ service cloud.firestore {
         allow create: if tableMember()
           && request.resource.data.createdBy == request.auth.uid;
         allow update: if tableMember()
-          && request.resource.data.createdBy == resource.data.createdBy;
+          && request.resource.data.createdBy == resource.data.createdBy
+          && (resource.data.createdBy == request.auth.uid || privileged());
         // All members can edit shared notes; only the creator or a moderator
         // or owner may delete one.
         allow delete: if tableMember()
