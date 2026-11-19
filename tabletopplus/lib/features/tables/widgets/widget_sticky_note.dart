@@ -11,6 +11,8 @@ class WidgetStickyNote extends StatelessWidget {
     required this.onDragEnd,
     required this.onEdit,
     required this.onDelete,
+    this.canEdit = true,
+    this.canDelete = true,
   });
 
   final BoardNote note;
@@ -18,6 +20,8 @@ class WidgetStickyNote extends StatelessWidget {
   final VoidCallback onDragEnd;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final bool canEdit;
+  final bool canDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +36,8 @@ class WidgetStickyNote extends StatelessWidget {
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onPanUpdate: onDragUpdate,
-              onPanEnd: (_) => onDragEnd(),
+              onPanUpdate: canEdit ? onDragUpdate : null,
+              onPanEnd: canEdit ? (_) => onDragEnd() : null,
               child: SizedBox(
                 height: 40,
                 child: Row(
@@ -49,13 +53,15 @@ class WidgetStickyNote extends StatelessWidget {
                         style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Edit note',
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit_outlined, size: 17, color: Colors.black87),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    PopupMenuButton<String>(
+                    if (canEdit)
+                      IconButton(
+                        tooltip: 'Edit note',
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined, size: 17, color: Colors.black87),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    if (canDelete)
+                      PopupMenuButton<String>(
                       tooltip: 'Note actions',
                       icon: const Icon(Icons.more_vert, color: Colors.black87, size: 18),
                       onSelected: (action) {
