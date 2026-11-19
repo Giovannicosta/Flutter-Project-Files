@@ -24,6 +24,11 @@ final boardNotesProvider = StreamProvider.family<List<BoardNote>, String>((ref, 
   return ref.watch(tableRepositoryProvider).watchNotes(tableId);
 });
 
+final tableAchievementsProvider =
+    StreamProvider.family<List<({String title, String body})>, String>((ref, tableId) {
+  return ref.watch(tableRepositoryProvider).watchAchievements(tableId);
+});
+
 class TableRepository {
   const TableRepository(this._db, this._auth);
 
@@ -148,6 +153,31 @@ class TableRepository {
       .orderBy('createdAt')
       .snapshots()
       .map((snapshot) => snapshot.docs.map(BoardNote.fromSnapshot).toList());
+
+  CollectionReference<Map<String, dynamic>> _achievements(String tableId) =>
+      _tables.doc(tableId).collection('achievements');
+
+  Stream<List<({String title, String body})>> watchAchievements(String tableId) =>
+      _achievements(tableId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((document) {
+                final data = document.data();
+                return (title: data['title'] as String, body: data['body'] as String);
+              }).toList());
+
+  Future<void> createAchievement({
+    required String tableId,
+    required String title,
+    required String body,
+  }) async {
+    await _achievements(tableId).add({
+      'title': title.trim(),
+      'body': body.trim(),
+      'createdBy': _uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 
   Future<String> createTable(String name) async {
     final normalized = name.trim();
