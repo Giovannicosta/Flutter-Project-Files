@@ -78,10 +78,23 @@ class TableRepository {
       final snapshot = await transaction.get(table);
       if (!snapshot.exists) throw StateError('Table not found.');
       final data = snapshot.data()!;
-      if (data['ownerId'] != uid) throw StateError('Only the owner can manage members.');
+      final isOwner = data['ownerId'] == uid;
       final members = List<String>.from(data['memberIds'] as List? ?? []);
       final moderators = List<String>.from(data['moderatorIds'] as List? ?? []);
       final banned = List<String>.from(data['bannedIds'] as List? ?? []);
+      final isModerator = moderators.contains(uid) && members.contains(uid);
+      // Moderators can only kick regular members. Ban, unban and all
+      // role changes remain owner-only.
+      if (!isOwner) {
+        if (action != 'kick' || !isModerator) {
+          throw StateError('Only the owner may perform this action.');
+        }
+        if (!members.contains(targetUid) ||
+            targetUid == data['ownerId'] ||
+            moderators.contains(targetUid)) {
+          throw StateError('Moderators can only kick regular members.');
+        }
+      }
       if (action == 'kick' || action == 'ban') {
         members.remove(targetUid);
         moderators.remove(targetUid);

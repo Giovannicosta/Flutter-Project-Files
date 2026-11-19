@@ -76,6 +76,7 @@ class TableMembersDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isOwner = table.isOwner(currentUid);
+    final isModerator = table.isModerator(currentUid);
     final members = [...table.memberIds];
     members.sort((a, b) {
       if (a == table.ownerId) return -1;
@@ -102,6 +103,20 @@ class TableMembersDrawer extends ConsumerWidget {
               ),
             ),
             const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  isOwner
+                      ? 'Owner: manage roles, kick, ban, and unban.'
+                      : isModerator
+                          ? 'Moderator: edit all notes and kick regular members.'
+                          : 'Member: create and edit your own notes.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ),
             Expanded(
               child: ListView(
                 children: [
@@ -133,19 +148,39 @@ class TableMembersDrawer extends ConsumerWidget {
                       subtitle: Text(uid == table.ownerId
                           ? 'Owner'
                           : table.isModerator(uid) ? 'Moderator' : 'Member'),
-                      trailing: isOwner && uid != currentUid
+                      trailing: uid != currentUid &&
+                              (isOwner || (isModerator &&
+                                  uid != table.ownerId && !table.isModerator(uid)))
                           ? PopupMenuButton<String>(
                               tooltip: 'Manage member',
                               onSelected: (action) => _moderate(context, ref, uid, action),
                               itemBuilder: (_) => [
-                                PopupMenuItem(
-                                  value: table.isModerator(uid) ? 'demote' : 'promote',
-                                  child: Text(table.isModerator(uid)
-                                      ? 'Remove moderator privileges'
-                                      : 'Give moderator privileges'),
+                                if (isOwner)
+                                  PopupMenuItem(
+                                    value: table.isModerator(uid) ? 'demote' : 'promote',
+                                    child: Text(table.isModerator(uid)
+                                        ? 'Remove moderator privileges'
+                                        : 'Give moderator privileges'),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'kick',
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: Icon(Icons.person_remove_outlined),
+                                    title: Text('Kick from table'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
-                                const PopupMenuItem(value: 'kick', child: Text('Kick from table')),
-                                const PopupMenuItem(value: 'ban', child: Text('Ban from table')),
+                                if (isOwner)
+                                  const PopupMenuItem(
+                                    value: 'ban',
+                                    child: ListTile(
+                                      dense: true,
+                                      leading: Icon(Icons.block),
+                                      title: Text('Ban from table'),
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
                               ],
                             )
                           : null,
