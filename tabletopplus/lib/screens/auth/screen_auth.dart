@@ -364,220 +364,268 @@ class _ScreenAuthState extends ConsumerState<ScreenAuth> {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild when the notifier publishes a new immutable state snapshot.
+    // Keep the existing authentication and account-creation logic intact.
     ref.watch(providerUserProfile);
+    const darkBrown = Color(0xFF55412D);
+    const warmBrown = Color(0xFF8A6A43);
+    const warmYellow = Color(0xFFF1CD58);
+    const cream = Color(0xFFFFFAF1);
+    const border = Color(0xFFEADFCC);
+
+    InputDecoration fieldStyle(String label, IconData icon) => InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: warmBrown),
+          prefixIcon: Icon(icon, color: warmBrown, size: 20),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: warmBrown, width: 1.6),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.redAccent),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.redAccent, width: 1.6),
+          ),
+        );
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Form(
-        key: _formKey,
-        child: AutofillGroup(
-          child: SingleChildScrollView(
-            child: Container(
-              constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ///////////////////////////////////////////////////////////////////////
-                  // Logo
-                  ///////////////////////////////////////////////////////////////////////
-                  Padding(
-                    padding: const EdgeInsets.all(0),
-                    child: Center(
-                      child: Image.asset("images/logo.png", width: MediaQuery.of(context).size.width * 0.8),
-                    ),
-                  ),
-                  // Text(
-                  //   "CSC 322 Starer Project",
-                  //   textAlign: TextAlign.center,
-                  //   style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                  // ),
-                  // SizedBox(height: 10),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Email Text Field
-                  ///////////////////////////////////////////////////////////////////////
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: TextFormField(
-                      controller: _emailController,
-                      autofillHints: const [AutofillHints.username],
-                      autocorrect: false,
-                      textCapitalization: TextCapitalization.none,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty || !value.contains('@') || !value.contains('.')) {
-                          return 'Please enter a valid email address.';
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {},
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(labelText: 'Email'),
-                    ),
-                  ),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Password Text Field
-                  ///////////////////////////////////////////////////////////////////////
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: TextFormField(
-                      onFieldSubmitted: (value) {
-                        if (_signInMode) {
-                          _trySubmit();
-                        }
-                      },
-                      enableInteractiveSelection: true,
-                      controller: _passwordController,
-                      autofillHints: const [AutofillHints.password],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Enter a password.';
-                        return _signInMode ? null : validatePasssword(value);
-                      },
-                      onChanged: (context) {
-                        _passwordStrength = getPasswordStrength(_passwordController.text);
-                        _strengthText = getPasswordStrengthText(_passwordStrength);
-                        _strengthColor = getPasswordStrengthColor(_passwordStrength);
-                        setState(() {});
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        suffixIcon: IconButton(
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          icon: Icon(
-                            // Based on passwordVisible state choose the icon
-                            _passwordVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Theme.of(context).inputDecorationTheme.iconColor,
-                          ),
-                          onPressed: () {
-                            // Update the state i.e. toogle the state of passwordVisible variable
-                            setState(() {
-                              _passwordVisible = !_passwordVisible;
-                            });
-                          },
-                        ),
-                      ),
-                      onSaved: (value) {},
-                      obscureText: !_passwordVisible,
-                    ),
-                  ),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Forgot Password Button
-                  ///////////////////////////////////////////////////////////////////////
-                  if (_signInMode)
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 0),
-                      child: TextButton(
-                        onPressed: () {
-                          showPopup();
-                        },
-                        child: Align(alignment: Alignment.centerRight, child: const Text("Forgot Password?")),
-                      ),
-                    ),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Password Strength Indicator
-                  ///////////////////////////////////////////////////////////////////////
-                  if (!_signInMode && _passwordController.text.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: WidgetPasswordStrengthIndicator(
-                        passwordStrength: _passwordStrength,
-                        passwordText: _strengthText,
-                        passwordColor: _strengthColor,
-                      ),
-                    ),
-
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Confirm Password Text Field
-                  ///////////////////////////////////////////////////////////////////////
-                  if (!_signInMode)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: TextFormField(
-                        onFieldSubmitted: (value) {
-                          _trySubmit();
-                        },
-                        controller: _confirmPasswordController,
-                        autocorrect: false,
-                        textCapitalization: TextCapitalization.none,
-                        enableSuggestions: false,
-                        validator: (value) {
-                          if (validateConfirmPassword(value) != null) {
-                            return validateConfirmPassword(value);
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          suffixIcon: IconButton(
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            icon: Icon(
-                              // Based on passwordVisible state choose the icon
-                              _passwordVisible ? Icons.visibility : Icons.visibility_off,
-                              color: Theme.of(context).inputDecorationTheme.iconColor,
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: AutofillGroup(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 56),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 430),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // The user's tabletop icon, without the original
+                          // transparent padding surrounding it.
+                          Image.asset(
+                            'images/tabletopplus_mark.png',
+                            height: 112,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.casino_outlined,
+                              size: 90,
+                              color: warmBrown,
                             ),
-                            onPressed: () {
-                              // Update the state i.e. toogle the state of passwordVisible variable
-                              setState(() {
-                                _passwordVisible = !_passwordVisible;
-                              });
-                            },
                           ),
-                        ),
-                        obscureText: !_passwordVisible,
+                          const SizedBox(height: 8),
+                          const Text(
+                            'TableTopPlus',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.8,
+                              color: darkBrown,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Your adventures, all in one place.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14, color: warmBrown),
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
+                            decoration: BoxDecoration(
+                              color: cream,
+                              borderRadius: BorderRadius.circular(28),
+                              border: Border.all(color: border),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x146D5133),
+                                  blurRadius: 24,
+                                  offset: Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  _signInMode ? 'Welcome back' : 'Begin your adventure',
+                                  style: const TextStyle(
+                                    fontSize: 23,
+                                    color: darkBrown,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  _signInMode
+                                      ? 'Sign in to return to your table.'
+                                      : 'Create an account to share your stories.',
+                                  style: const TextStyle(color: warmBrown, fontSize: 13),
+                                ),
+                                const SizedBox(height: 22),
+                                TextFormField(
+                                  controller: _emailController,
+                                  autofillHints: const [AutofillHints.username],
+                                  autocorrect: false,
+                                  textCapitalization: TextCapitalization.none,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: fieldStyle('Email address', Icons.mail_outline),
+                                  validator: (value) {
+                                    if (value == null ||
+                                        value.trim().isEmpty ||
+                                        !value.contains('@') ||
+                                        !value.contains('.')) {
+                                      return 'Please enter a valid email address.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  autofillHints: const [AutofillHints.password],
+                                  enableInteractiveSelection: true,
+                                  obscureText: !_passwordVisible,
+                                  decoration: fieldStyle('Password', Icons.lock_outline).copyWith(
+                                    suffixIcon: IconButton(
+                                      tooltip: _passwordVisible ? 'Hide password' : 'Show password',
+                                      icon: Icon(
+                                        _passwordVisible
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: warmBrown,
+                                      ),
+                                      onPressed: () =>
+                                          setState(() => _passwordVisible = !_passwordVisible),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) return 'Enter a password.';
+                                    return _signInMode ? null : validatePasssword(value);
+                                  },
+                                  onChanged: (_) {
+                                    _passwordStrength = getPasswordStrength(_passwordController.text);
+                                    _strengthText = getPasswordStrengthText(_passwordStrength);
+                                    _strengthColor = getPasswordStrengthColor(_passwordStrength);
+                                    setState(() {});
+                                  },
+                                  onFieldSubmitted: (_) {
+                                    if (_signInMode) _trySubmit();
+                                  },
+                                ),
+                                if (_signInMode)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      style: TextButton.styleFrom(foregroundColor: warmBrown),
+                                      onPressed: showPopup,
+                                      child: const Text('Forgot password?'),
+                                    ),
+                                  ),
+                                if (!_signInMode) ...[
+                                  if (_passwordController.text.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    WidgetPasswordStrengthIndicator(
+                                      passwordStrength: _passwordStrength,
+                                      passwordText: _strengthText,
+                                      passwordColor: _strengthColor,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 14),
+                                  TextFormField(
+                                    controller: _confirmPasswordController,
+                                    obscureText: !_passwordVisible,
+                                    autocorrect: false,
+                                    textCapitalization: TextCapitalization.none,
+                                    enableSuggestions: false,
+                                    decoration: fieldStyle(
+                                      'Confirm password',
+                                      Icons.verified_user_outlined,
+                                    ),
+                                    validator: validateConfirmPassword,
+                                    onFieldSubmitted: (_) => _trySubmit(),
+                                  ),
+                                ],
+                                const SizedBox(height: 20),
+                                SizedBox(
+                                  height: 52,
+                                  child: FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: darkBrown,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    onPressed: _trySubmit,
+                                    child: Text(
+                                      _signInMode ? 'Sign in' : 'Create account',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  style: TextButton.styleFrom(foregroundColor: darkBrown),
+                                  onPressed: () => setState(() => _signInMode = !_signInMode),
+                                  child: Text(
+                                    _signInMode
+                                        ? 'New to the table? Create an account'
+                                        : 'Already have an account? Sign in',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.auto_stories_outlined, size: 17, color: warmBrown),
+                              SizedBox(width: 9),
+                              Text(
+                                'Gather • Create • Explore',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: warmBrown,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 42,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: warmYellow,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Sign in Button and Create Account Toggle Button
-                  ///////////////////////////////////////////////////////////////////////
-                  if (_signInMode)
-                    Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 0),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _trySubmit();
-                            },
-                            child: const Text("Sign In", style: TextStyle(fontSize: 23)),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 0),
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _signInMode = false;
-                              });
-                            },
-                            child: const Text("Create an account"),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ///////////////////////////////////////////////////////////////////////
-                  /// Create Account Button and Already Have Account Toggle Button
-                  ///////////////////////////////////////////////////////////////////////
-                  if (!_signInMode)
-                    Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            _trySubmit();
-                          },
-                          child: const Text("Create Account"),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _signInMode = true;
-                            });
-                          },
-                          child: const Text("Use existing account"),
-                        ),
-                      ],
-                    ),
-                ],
+                  ),
+                ),
               ),
             ),
           ),
